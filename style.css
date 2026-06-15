@@ -1,0 +1,103 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    margin: 0;
+    padding: 20px;
+}
+
+.contenedor {
+    display: flex;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+canvas {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    /* Fondo cuadriculado opcional para parecer un cuaderno */
+    background-image: linear-gradient(#e5e7eb 1px, transparent 1px),
+                      linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.panel-herramientas {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.seccion {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+h2, h3 {
+    margin: 0 0 10px 0;
+    color: #1f2937;
+}
+
+label {
+    font-size: 14px;
+    color: #4b5563;
+}
+
+input, select {
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+}
+
+button {
+    padding: 10px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background-color: #4f46e5;
+    color: white;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #4338ca;
+}
+
+.btn-peligro {
+    background-color: #ef4444;
+}
+
+.btn-peligro:hover {
+    background-color: #dc2626;
+}
+
+.btn-exito {
+    background-color: #10b981;
+}
+
+.btn-exito:hover {
+    background-color: #059669;
+}
+
+.resultado-item {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #374151;
+}
+
+.resultado-item strong {
+    color: #111827;
+}

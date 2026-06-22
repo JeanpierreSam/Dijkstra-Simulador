@@ -784,7 +784,7 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
             limpiarRutaResaltada();
             
             // Mostrar mensaje de error en el canvas
-            mostrarMensajeErrorEnCanvas(nombreAlgoritmo);
+            mostrarMensajeErrorEnCanvas(nombreAlgoritmo, tiempoEjecucion);
             
             panelResultados.style.display = 'none'; 
             modal.style.display = 'flex';           

@@ -9,28 +9,36 @@ class Grafo {
         let distancias = {};
         let visitados = {};
         let previos = {};
+        let operaciones = 0; // 👈 CONTADOR DE OPERACIONES
         
-        // Inicializar distancias al infinito, emulando Int32.MaxValue
+        // Inicializar distancias al infinito
         this.nodos.forEach(nodo => {
             distancias[nodo.id] = Infinity;
             visitados[nodo.id] = false;
             previos[nodo.id] = null;
+            operaciones++; // 👈 Contar cada inicialización
         });
         
         distancias[nodoInicialId] = 0;
-
+        //Bucle Principal V
         for (let i = 0; i < this.nodos.length; i++) {
+            operaciones++; // 👈 Contar cada iteración del bucle principal
+            
             // Buscar el nodo no visitado con la distancia mínima
             let nodoActual = this.obtenerNodoMinimaDistancia(distancias, visitados);
+            operaciones += this.nodos.length; // 👈 Contar las comparaciones en obtenerNodoMinimaDistancia
+            
             if (nodoActual === null) break;
             
             visitados[nodoActual] = true;
 
             // Actualizar las distancias de los vecinos
-           let vecinos = this.aristas.filter(a => a.origen === nodoActual);
+            let vecinos = this.aristas.filter(a => a.origen === nodoActual);
+            operaciones += this.aristas.length; // 👈 Contar el filtro de aristas
             
             vecinos.forEach(arista => {
-                let vecinoId = arista.destino; // El destino siempre será el vecino en un grafo dirigido
+                operaciones++; // 👈 Contar cada vecino procesado
+                let vecinoId = arista.destino;
                 
                 if (!visitados[vecinoId]) {
                     let nuevaDistancia = distancias[nodoActual] + arista.peso;
@@ -41,8 +49,8 @@ class Grafo {
                 }
             });
         }
-        return { distancias, previos };
-    }
+        return { distancias, previos, operaciones }; // 👈 Retornar el contador
+    }   
 
     obtenerNodoMinimaDistancia(distancias, visitados) {
         let minValor = Infinity;
@@ -60,12 +68,14 @@ class Grafo {
     calcularFloydWarshall(origenId, destinoId) {
         let dist = {};
         let next = {};
+        let operaciones = 0; // 👈 CONTADOR DE OPERACIONES
 
         // Inicializar matrices
         this.nodos.forEach(u => {
             dist[u.id] = {};
             next[u.id] = {};
             this.nodos.forEach(v => {
+                operaciones++; // 👈 Contar cada inicialización
                 if (u.id === v.id) {
                     dist[u.id][v.id] = 0;
                     next[u.id][v.id] = null;
@@ -78,14 +88,16 @@ class Grafo {
 
         // Llenar con los pesos de las aristas existentes
         this.aristas.forEach(a => {
+            operaciones++; // 👈 Contar cada arista procesada
             dist[a.origen][a.destino] = a.peso;
             next[a.origen][a.destino] = a.destino;
         });
 
         // Triple bucle de Floyd-Warshall O(n^3)
-        this.nodos.forEach(k => {
-            this.nodos.forEach(i => {
-                this.nodos.forEach(j => {
+        this.nodos.forEach(k => { //Nodo Intermedio
+            this.nodos.forEach(i => { //Nodo origen
+                this.nodos.forEach(j => { //Nodo final
+                    operaciones++; // 👈 Contar cada iteración del triple bucle
                     if (dist[i.id][k.id] !== Infinity && dist[k.id][j.id] !== Infinity) {
                         if (dist[i.id][j.id] > dist[i.id][k.id] + dist[k.id][j.id]) {
                             dist[i.id][j.id] = dist[i.id][k.id] + dist[k.id][j.id];
@@ -101,19 +113,20 @@ class Grafo {
         let costo = dist[origenId][destinoId];
         
         if (costo === Infinity) {
-            return { costo: Infinity, rutaStr: "No hay camino" };
+            return { costo: Infinity, rutaStr: "No hay camino", operaciones };
         }
 
         if (costo !== Infinity) {
             let u = origenId;
-            ruta.push(`A${u}`);
+            ruta.push(`${u}`);
             while (u !== destinoId && next[u][destinoId] !== null) {
+                operaciones++; // 👈 Contar la reconstrucción de ruta
                 u = next[u][destinoId];
-                ruta.push(`A${u}`);
+                ruta.push(`${u}`);
             }
         }
 
-        return { costo: costo, rutaStr: ruta.join(' → ') };
+        return { costo: costo, rutaStr: ruta.join(' → '), operaciones }; // 👈 Retornar el contador
     }
 
     // --- NUEVO: Obtener el recorrido y valor de TODOS los caminos (DFS con Backtracking) ---

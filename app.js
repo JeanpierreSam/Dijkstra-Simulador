@@ -738,10 +738,13 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
         let nombreAlgoritmo = "";
 
         // 1. Ejecutar el algoritmo elegido
+        let operacionesRealizadas = 0; // 👈 Variable para guardar el contador
+
         if (algoritmoSeleccionado === 'dijkstra') {
             nombreAlgoritmo = "Dijkstra";
             const resultado = grafo.calcularDijkstra(nodoInicial);
             distanciaAlDestino = resultado.distancias[nodoFinal];
+            operacionesRealizadas = resultado.operaciones; // 👈 Guardar el contador
             if (distanciaAlDestino !== Infinity) {
                 rutaStr = reconstruirRuta(resultado.previos, nodoInicial, nodoFinal);
             }
@@ -750,6 +753,7 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
             const resultado = grafo.calcularFloydWarshall(nodoInicial, nodoFinal);
             distanciaAlDestino = resultado.costo;
             rutaStr = resultado.rutaStr;
+            operacionesRealizadas = resultado.operaciones; // 👈 Guardar el contador
         }
 
         // 2. Obtener TODAS las rutas posibles
@@ -772,15 +776,17 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
         } else {
             contenidoResultados.innerHTML = ''; 
             
+            
             // A. Mostrar el camino óptimo (calculado por el algoritmo elegido)
             const divOptimo = document.createElement('div');
             divOptimo.className = 'resultado-item';
-            divOptimo.style.borderLeft = '4px solid #10b981'; // Borde verde para destacar
+            divOptimo.style.borderLeft = '4px solid #10b981';
             divOptimo.innerHTML = `
                 <div style="width: 100%;">
                     <strong style="color: #10b981;">Camino más corto (${nombreAlgoritmo})</strong><br>
                     <span style="font-size: 13px; color: #64748b;">Secuencia:</span> <strong>${rutaStr}</strong><br>
-                    <span style="font-size: 13px; color: #64748b;">Valor total:</span> <strong style="font-size: 16px;">${distanciaAlDestino}</strong>
+                    <span style="font-size: 13px; color: #64748b;">Valor total:</span> <strong style="font-size: 16px;">${distanciaAlDestino}</strong><br>
+                    <span style="font-size: 12px; color: #6b7280;">⚙️ Operaciones realizadas:</span> <strong style="color: #4f46e5;">${operacionesRealizadas}</strong>
                 </div>
             `;
             contenidoResultados.appendChild(divOptimo);

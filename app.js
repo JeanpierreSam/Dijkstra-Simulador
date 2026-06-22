@@ -11,6 +11,9 @@ let contadorNodos = 1; // Para asignar IDs automáticamente (1, 2, 3...)
 let modoActual = 'agregar_nodo'; // Puede ser: 'agregar_nodo', 'seleccionar'
 let nodoSeleccionado = null;     // Para saber a qué nodo le hicimos clic
 
+let arrastrandoNodo = null;
+let offsetMouseX = 0;
+let offsetMouseY = 0;
 
 // Configurar los botones del panel para cambiar de modo
 document.getElementById('btnAgregarNodo').addEventListener('click', () => {
@@ -97,9 +100,63 @@ function renderizar() {
     actualizarMatrizAdyacencia();
 }
 
-
 // Instanciamos la clase Grafo de tu logica.js
 const grafo = new Grafo(); 
+
+function resaltarRutaEnCanvas(ruta, color = '#10b981') {
+    // ruta es un array de IDs: [1, 3, 5]
+    for (let i = 0; i < ruta.length - 1; i++) {
+        const origen = nodos.find(n => n.id === ruta[i]);
+        const destino = nodos.find(n => n.id === ruta[i + 1]);
+        
+        if (origen && destino) {
+            // Dibujar línea gruesa y de color
+            ctx.beginPath();
+            ctx.moveTo(origen.x, origen.y);
+            ctx.lineTo(destino.x, destino.y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 5;
+            ctx.stroke();
+            
+            // Dibujar flecha más grande
+            const angulo = Math.atan2(destino.y - origen.y, destino.x - origen.x);
+            const flechaX = destino.x - 20 * Math.cos(angulo);
+            const flechaY = destino.y - 20 * Math.sin(angulo);
+            
+            ctx.beginPath();
+            ctx.moveTo(flechaX, flechaY);
+            ctx.lineTo(flechaX - 15 * Math.cos(angulo - Math.PI / 6), flechaY - 15 * Math.sin(angulo - Math.PI / 6));
+            ctx.lineTo(flechaX - 15 * Math.cos(angulo + Math.PI / 6), flechaY - 15 * Math.sin(angulo + Math.PI / 6));
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+    }
+}
+
+function mostrarResultadosEnCanvas(rutaStr, costo, algoritmo) {
+    const padding = 15;
+    const x = 10;
+    const y = 10;
+    const ancho = 350;
+    const alto = 80;
+    
+    // Fondo semitransparente
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillRect(x, y, ancho, alto);
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, ancho, alto);
+    
+    // Texto
+    ctx.fillStyle = '#1f2937';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`🏆 Algoritmo: ${algoritmo}`, x + padding, y + 25);
+    
+    ctx.font = '13px Arial';
+    ctx.fillText(`Ruta: ${rutaStr}`, x + padding, y + 45);
+    ctx.fillText(`Costo total: ${costo}`, x + padding, y + 65);
+}
 
 // Función para actualizar el selector de nodos para Dijkstra
 function actualizarSelectNodos() {
@@ -132,10 +189,7 @@ function actualizarSelectNodos() {
     if (valFinal) selectFinal.value = valFinal;
 }
 
-// Modificar el evento del canvas para actualizar el select cuando agregas un nodo
-canvas.addEventListener('mouseup', () => {
-    actualizarSelectNodos();
-});
+
 
 // Escuchar clics en el lienzo
 canvas.addEventListener('mousedown', (evento) => {
@@ -153,17 +207,19 @@ canvas.addEventListener('mousedown', (evento) => {
         const aristaClickeada = encontrarAristaEnClic(x, y);
         
         if (aristaClickeada) {
-            // Si se hizo clic en una arista, editar su peso
             editarPesoArista(aristaClickeada);
-            return; // Salir para no procesar el clic en nodos
+            return; 
         }
         
-        // Si no se hizo clic en una arista, verificar nodos
+        // Verificar si se hizo clic en un nodo
         nodoSeleccionado = null;
         for (let nodo of nodos) {
             const distancia = Math.hypot(nodo.x - x, nodo.y - y);
             if (distancia <= 20) {
                 nodoSeleccionado = nodo;
+                arrastrandoNodo = nodo; // 👈 Iniciar arrastre
+                offsetMouseX = x - nodo.x; 
+                offsetMouseY = y - nodo.y;
                 break;
             }
         }
@@ -176,19 +232,31 @@ canvas.addEventListener('mousemove', (evento) => {
     const x = evento.clientX - rect.left;
     const y = evento.clientY - rect.top;
     
+    // Mover nodo si está siendo arrastrado
+    if (arrastrandoNodo) {
+        arrastrandoNodo.x = x - offsetMouseX;
+        arrastrandoNodo.y = y - offsetMouseY;
+        renderizar();
+        return; // No procesar hover si está arrastrando
+    }
+    
+    // Hover effect para aristas
     const aristaBajoMouse = encontrarAristaEnClic(x, y);
     
     if (aristaBajoMouse && modoActual === 'seleccionar') {
-        canvas.style.cursor = 'pointer'; // Manito
+        canvas.style.cursor = 'pointer';
     } else if (modoActual === 'agregar_nodo') {
-        canvas.style.cursor = 'crosshair'; // Cruz para agregar
+        canvas.style.cursor = 'crosshair';
     } else {
-        canvas.style.cursor = 'default'; // Cursor normal
+        canvas.style.cursor = 'default';
     }
 });
 
+canvas.addEventListener('mouseup', () => {
+    arrastrandoNodo = null; // 👈 Detener arrastre
+    actualizarSelectNodos();
+});
 
-// Evento: Agregar Arco
 // Evento: Agregar Arco (Con validación de duplicados)
 document.getElementById('btnAgregarArco').addEventListener('click', () => {
     const origen = parseInt(document.getElementById('arcoOrigen').value);
@@ -324,6 +392,11 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
                 });
             }
             
+            
+            const rutaArray = rutaStr.split(' → ').map(n => parseInt(n.replace('A', '')));
+            resaltarRutaEnCanvas(rutaArray);
+            mostrarResultadosEnCanvas(rutaStr, distanciaAlDestino, nombreAlgoritmo);
+
             panelResultados.style.display = 'block'; 
             modal.style.display = 'none';            
         }
@@ -332,11 +405,10 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
     }
 });
 
-// --- NUEVO: Evento para cerrar la ventana modal ---
+// --- Evento para cerrar la ventana modal ---
 document.getElementById('btnCerrarModal').addEventListener('click', () => {
     document.getElementById('modalSinRuta').style.display = 'none';
 });
-// --- NUEVAS FUNCIONES ---
 
 // 1. Reconstruir la ruta exacta de nodos
 function reconstruirRuta(previos, origen, destino) {

@@ -188,3 +188,84 @@ button:hover {
 .modal-contenido button {
     width: 100%;
 }
+
+/* Controles de zoom */
+.zoom-controls {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    padding: 6px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(15,23,42,0.08);
+    z-index: 10;
+}
+
+.btn-zoom {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.btn-zoom:hover {
+    background: #cbd5e1;
+}
+
+/* Asegurar que el contenedor tenga position relative para los controles absolutos */
+.contenedor {
+    position: relative;
+}
+
+/* Menú Contextual */
+.context-menu {
+    display: none;
+    position: fixed;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    min-width: 180px;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.context-menu.open {
+    display: block;
+}
+
+.context-menu-title {
+    padding: 10px 14px;
+    font-weight: 700;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e5e7eb;
+    color: #1f2937;
+}
+
+.context-menu-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.1s;
+    color: #374151;
+}
+
+.context-menu-item:hover {
+    background: #f1f5f9;
+}
+
+.context-menu-item:last-child {
+    color: #6b7280;
+}

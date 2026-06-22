@@ -54,7 +54,20 @@
                 <h3>Resultados del Análisis</h3>
                 <div id="contenidoResultados" style="max-height: 250px; overflow-y: auto;"></div>
             </div>
+
+            <div class="seccion" style="margin-top: 20px; border-top: 2px solid #ef4444;">
+                <button id="btnLimpiarTodo" class="btn-peligro" style="width: 100%;">️ Limpiar Todo el Grafo</button>
+            </div>
+        </div>
+    </div>
         </div> 
+    </div>
+
+    <!-- Controles de zoom -->
+    <div class="zoom-controls">
+        <button class="btn-zoom" onclick="zoomIn()" title="Acercar">+</button>
+        <button class="btn-zoom" onclick="zoomOut()" title="Alejar">−</button>
+        <button class="btn-zoom" onclick="resetZoom()" title="Restablecer vista">⟲</button>
     </div>
 
     <div id="panelMatriz" class="contenedor-inferior" style="display: none;">
@@ -69,6 +82,13 @@
             <button id="btnCerrarModal" class="btn-peligro">Entendido</button>
         </div>
     </div>
+    <!-- Menú Contextual para Nodos -->
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-title" id="contextMenuTitle">Nodo</div>
+        <div class="context-menu-item" onclick="confirmarEliminarNodoContextual()">🗑️ Eliminar nodo</div>
+        <div class="context-menu-item" onclick="cerrarMenuContextual()"> Cancelar</div>
+    </div>
+    
     <script src="logica.js"></script>
     <script src="app.js"></script>
 </body>

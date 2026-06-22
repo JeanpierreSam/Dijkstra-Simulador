@@ -269,3 +269,75 @@ button:hover {
 .context-menu-item:last-child {
     color: #6b7280;
 }
+
+/* Modal de edición de arista */
+.modal-arista {
+    width: 340px;
+    border-top: 5px solid #4f46e5;
+    animation: aparecer 0.3s ease-out;
+}
+
+.info-arista {
+    text-align: center;
+    margin: 15px 0;
+}
+
+.badge-arista {
+    display: inline-block;
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 14px;
+    border: 1px solid #c7d2fe;
+}
+
+.campo-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 15px 0;
+}
+
+.campo-modal label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.campo-modal input {
+    padding: 10px;
+    border: 2px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    transition: border-color 0.2s;
+}
+
+.campo-modal input:focus {
+    outline: none;
+    border-color: #4f46e5;
+}
+
+.modal-botones {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.modal-botones button {
+    flex: 1;
+    padding: 10px;
+    font-size: 13px;
+}
+
+.btn-secundario {
+    background-color: #6b7280;
+    color: white;
+}
+
+.btn-secundario:hover {
+    background-color: #4b5563;
+}

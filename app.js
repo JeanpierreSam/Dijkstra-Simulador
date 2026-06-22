@@ -16,6 +16,7 @@ let arrastrandoNodo = null;
 let offsetMouseX = 0;
 let offsetMouseY = 0;
 let rutaResaltada = null;
+let aristaEnEdicion = null;
 
 let contextNodeId = null; // ID del nodo seleccionado en el menú contextual
 let freeIds = [];
@@ -27,6 +28,11 @@ let panY = 0;
 let isPanning = false;
 let startPanX = 0;
 let startPanY = 0;
+
+function setStatus(mensaje) {
+    console.log(mensaje); // Por ahora solo muestra en consola
+    // Si quieres mostrarlo en la UI, puedes crear un elemento en el HTML
+}
 
 // Obtener el siguiente ID disponible
 function getNextId() {
@@ -411,6 +417,73 @@ function validarPesoNegativo(peso) {
     return true;
 }
 
+function abrirModalArista(arista) {
+    aristaEnEdicion = arista;
+    
+    document.getElementById('modalAristaTitulo').textContent = 
+        `Editar arista ${arista.origen} → ${arista.destino}`;
+    document.getElementById('modalAristaInfo').textContent = 
+        `${arista.origen} → ${arista.destino}`;
+    document.getElementById('modalPesoInput').value = arista.peso;
+    
+    document.getElementById('modalEditarArista').style.display = 'flex';
+    
+    setTimeout(() => {
+        document.getElementById('modalPesoInput').focus();
+        document.getElementById('modalPesoInput').select();
+    }, 100);
+}
+
+function cerrarModalArista() {
+    document.getElementById('modalEditarArista').style.display = 'none';
+    aristaEnEdicion = null;
+}
+
+function guardarArista() {
+    if (!aristaEnEdicion) return;
+    
+    const nuevoPeso = parseInt(document.getElementById('modalPesoInput').value);
+    
+    if (isNaN(nuevoPeso)) {
+        alert('Por favor, ingresa un número válido.');
+        return;
+    }
+    
+    if (!validarPesoNegativo(nuevoPeso)) return;
+    
+    aristaEnEdicion.peso = nuevoPeso;
+    
+    cerrarModalArista();
+    renderizar();
+    setStatus(`Peso actualizado: ${aristaEnEdicion.origen} → ${aristaEnEdicion.destino} = ${nuevoPeso}`);
+}
+
+function eliminarArista() {
+    if (!aristaEnEdicion) return;
+    
+    const origen = aristaEnEdicion.origen;
+    const destino = aristaEnEdicion.destino;
+    
+    if (!confirm(`¿Eliminar la arista ${origen} → ${destino}?`)) return;
+    
+    aristas = aristas.filter(a => !(a.origen === origen && a.destino === destino));
+    
+    if (rutaResaltada) {
+        const aristaEnRuta = rutaResaltada.some((id, i) => 
+            i < rutaResaltada.length - 1 && 
+            rutaResaltada[i] === origen && 
+            rutaResaltada[i + 1] === destino
+        );
+        if (aristaEnRuta) {
+            rutaResaltada = null;
+        }
+    }
+    
+    cerrarModalArista();
+    renderizar();
+    setStatus(`Arista ${origen} → ${destino} eliminada.`);
+}
+
 function abrirMenuContextual(idNodo, x, y) {
     contextNodeId = idNodo;
     document.getElementById('contextMenuTitle').textContent = `Nodo ${idNodo}`;
@@ -466,25 +539,22 @@ canvas.addEventListener('mousedown', (evento) => {
     const x = gCoord.x;
     const y = gCoord.y;
 
-    // Click derecho: iniciar pan
     if (evento.button === 2) {
-        const gCoord = toGraphCoords(evento.clientX, evento.clientY);
-        
-        // Verificar si el click fue sobre un nodo
-        const nodoClickeado = nodos.find(n => Math.hypot(n.x - gCoord.x, n.y - gCoord.y) <= 20);
+        // Ya no necesitas declarar gCoord de nuevo, úsala directamente
+        const nodoClickeado = nodos.find(n => Math.hypot(n.x - gCoord.x, n.y - gCoord.y) <= 20 / scale);
         
         if (nodoClickeado) {
             abrirMenuContextual(nodoClickeado.id, evento.clientX, evento.clientY);
-            return; // No iniciar pan si fue sobre un nodo
+            return;
         }
         
-        // Si no fue sobre un nodo, iniciar pan normalmente
         isPanning = true;
         startPanX = evento.clientX - panX;
         startPanY = evento.clientY - panY;
         canvas.style.cursor = 'grabbing';
         return;
     }
+    // ... resto del código
 
     // Click izquierdo
     if (modoActual === 'agregar_nodo') {
@@ -741,7 +811,7 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
             }
             
             
-            const rutaArray = rutaStr.split(' → ').map(n => parseInt(n.replace('A', '')));
+            const rutaArray = rutaStr.split(' → ').map(n => parseInt(n));
             resaltarRutaEnCanvas(rutaArray);
             mostrarResultadosEnCanvas(rutaStr, distanciaAlDestino, nombreAlgoritmo);
 
@@ -772,6 +842,31 @@ document.getElementById('btnLimpiarTodo').addEventListener('click', () => {
     actualizarSelectNodos();
     renderizar();
     setStatus('Grafo limpiado completamente.');
+});
+
+document.getElementById('btnGuardarArista').addEventListener('click', guardarArista);
+document.getElementById('btnEliminarArista').addEventListener('click', eliminarArista);
+document.getElementById('btnCancelarArista').addEventListener('click', cerrarModalArista);
+
+document.getElementById('modalEditarArista').addEventListener('click', (e) => {
+    if (e.target.id === 'modalEditarArista') {
+        cerrarModalArista();
+    }
+});
+
+document.getElementById('modalPesoInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        guardarArista();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modalArista = document.getElementById('modalEditarArista');
+        if (modalArista.style.display === 'flex') {
+            cerrarModalArista();
+        }
+    }
 });
 
 // Llamada inicial para asegurar que el lienzo esté limpio

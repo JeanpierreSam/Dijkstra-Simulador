@@ -123,6 +123,7 @@ function renderizar() {
         ctx.textBaseline = 'middle';
         ctx.fillText(nodo.id, nodo.x, nodo.y);
     });
+    actualizarMatrizAdyacencia();
 }
 
 
@@ -131,14 +132,33 @@ const grafo = new Grafo();
 
 // Función para actualizar el selector de nodos para Dijkstra
 function actualizarSelectNodos() {
-    const select = document.getElementById('selectNodoInicial');
-    select.innerHTML = ''; // Limpiar opciones
+    const selectInicial = document.getElementById('selectNodoInicial');
+    const selectFinal = document.getElementById('selectNodoFinal');
+    
+    // Guardamos los valores actuales por si el usuario ya había elegido uno
+    const valInicial = selectInicial.value;
+    const valFinal = selectFinal.value;
+
+    selectInicial.innerHTML = ''; 
+    selectFinal.innerHTML = ''; 
+
     nodos.forEach(nodo => {
-        const option = document.createElement('option');
-        option.value = nodo.id;
-        option.textContent = `Nodo ${nodo.id}`;
-        select.appendChild(option);
+        // Opción para origen
+        const opt1 = document.createElement('option');
+        opt1.value = nodo.id;
+        opt1.textContent = `Nodo A${nodo.id}`;
+        selectInicial.appendChild(opt1);
+
+        // Opción para destino
+        const opt2 = document.createElement('option');
+        opt2.value = nodo.id;
+        opt2.textContent = `Nodo A${nodo.id}`;
+        selectFinal.appendChild(opt2);
     });
+
+    // Restauramos valores si es posible
+    if (valInicial) selectInicial.value = valInicial;
+    if (valFinal) selectFinal.value = valFinal;
 }
 
 // Modificar el evento del canvas para actualizar el select cuando agregas un nodo
@@ -147,18 +167,29 @@ canvas.addEventListener('mouseup', () => {
 });
 
 // Evento: Agregar Arco
+// Evento: Agregar Arco (Con validación de duplicados)
 document.getElementById('btnAgregarArco').addEventListener('click', () => {
     const origen = parseInt(document.getElementById('arcoOrigen').value);
     const destino = parseInt(document.getElementById('arcoDestino').value);
     const peso = parseInt(document.getElementById('arcoPeso').value);
 
-    // Validar que los campos tengan datos y que los nodos existan
     if (origen && destino && peso) {
         const existeOrigen = nodos.some(n => n.id === origen);
         const existeDestino = nodos.some(n => n.id === destino);
         
         if(existeOrigen && existeDestino) {
-            aristas.push({ origen: origen, destino: destino, peso: peso });
+            // Buscamos si ya existe un arco en ESA dirección exacta
+            const indiceArcoExistente = aristas.findIndex(a => a.origen === origen && a.destino === destino);
+
+            if (indiceArcoExistente !== -1) {
+                // Si existe, solo actualizamos el peso (evita arcos duplicados)
+                aristas[indiceArcoExistente].peso = peso;
+                alert(`El arco de A${origen} a A${destino} ha sido actualizado con el nuevo peso de ${peso}.`);
+            } else {
+                // Si no existe, creamos uno nuevo
+                aristas.push({ origen: origen, destino: destino, peso: peso });
+            }
+            
             renderizar();
             
             // Limpiar inputs
@@ -191,49 +222,156 @@ document.getElementById('btnEliminarNodo').addEventListener('click', () => {
 });
 
 // Evento: Calcular Dijkstra (Conexión final con logica.js)
+// --- ACTUALIZADO: Manejo de Algoritmos y Múltiples Caminos ---
 document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
+    const algoritmoSeleccionado = document.getElementById('selectAlgoritmo').value;
     const nodoInicial = parseInt(document.getElementById('selectNodoInicial').value);
+    const nodoFinal = parseInt(document.getElementById('selectNodoFinal').value);
     
-    if(nodoInicial) {
-        // Sincronizar los datos visuales con la clase de lógica
+    if(nodoInicial && nodoFinal) {
         grafo.nodos = nodos;
         grafo.aristas = aristas;
         
-        // Ejecutar el cálculo
-        const resultado = grafo.calcularDijkstra(nodoInicial);
+        let distanciaAlDestino = Infinity;
+        let rutaStr = "";
+        let nombreAlgoritmo = "";
+
+        // 1. Ejecutar el algoritmo elegido
+        if (algoritmoSeleccionado === 'dijkstra') {
+            nombreAlgoritmo = "Dijkstra";
+            const resultado = grafo.calcularDijkstra(nodoInicial);
+            distanciaAlDestino = resultado.distancias[nodoFinal];
+            if (distanciaAlDestino !== Infinity) {
+                rutaStr = reconstruirRuta(resultado.previos, nodoInicial, nodoFinal);
+            }
+        } else {
+            nombreAlgoritmo = "Floyd-Warshall";
+            const resultado = grafo.calcularFloydWarshall(nodoInicial, nodoFinal);
+            distanciaAlDestino = resultado.costo;
+            rutaStr = resultado.rutaStr;
+        }
+
+        // 2. Obtener TODAS las rutas posibles
+        const todosLosCaminos = grafo.obtenerTodosLosCaminos(nodoInicial, nodoFinal);
         
-        // --- NUEVO: Mostrar resultados en el HTML ---
+        const modal = document.getElementById('modalSinRuta');
         const panelResultados = document.getElementById('panelResultados');
         const contenidoResultados = document.getElementById('contenidoResultados');
         
-        // Limpiar resultados anteriores
-        contenidoResultados.innerHTML = ''; 
-        
-        // Recorrer las distancias calculadas y crear un div por cada una
-        for (const idNodoDestino in resultado.distancias) {
-            const distancia = resultado.distancias[idNodoDestino];
-            const div = document.createElement('div');
-            div.className = 'resultado-item';
+        if (distanciaAlDestino === Infinity) {
+            panelResultados.style.display = 'none'; 
+            modal.style.display = 'flex';           
+        } else {
+            contenidoResultados.innerHTML = ''; 
             
-            // Si la distancia es Infinity, significa que no hay ruta posible
-            if (distancia === Infinity) {
-                div.innerHTML = `<strong>A Nodo ${idNodoDestino}:</strong> Inalcanzable`;
-            } else if (parseInt(idNodoDestino) === nodoInicial) {
-                div.innerHTML = `<strong>A Nodo ${idNodoDestino}:</strong> 0 (Origen)`;
-            } else {
-                div.innerHTML = `<strong>A Nodo ${idNodoDestino}:</strong> Distancia ${distancia}`;
+            // A. Mostrar el camino óptimo (calculado por el algoritmo elegido)
+            const divOptimo = document.createElement('div');
+            divOptimo.className = 'resultado-item';
+            divOptimo.style.borderLeft = '4px solid #10b981'; // Borde verde para destacar
+            divOptimo.innerHTML = `
+                <div style="width: 100%;">
+                    <strong style="color: #10b981;">Camino más corto (${nombreAlgoritmo})</strong><br>
+                    <span style="font-size: 13px; color: #64748b;">Secuencia:</span> <strong>${rutaStr}</strong><br>
+                    <span style="font-size: 13px; color: #64748b;">Valor total:</span> <strong style="font-size: 16px;">${distanciaAlDestino}</strong>
+                </div>
+            `;
+            contenidoResultados.appendChild(divOptimo);
+
+            // B. Listar los demás caminos
+            if (todosLosCaminos.length > 1) {
+                const tituloAlternativos = document.createElement('h4');
+                tituloAlternativos.textContent = `Otros caminos posibles (${todosLosCaminos.length - 1}):`;
+                tituloAlternativos.style.fontSize = '13px';
+                tituloAlternativos.style.margin = '15px 0 5px 0';
+                contenidoResultados.appendChild(tituloAlternativos);
+
+                todosLosCaminos.forEach((camino, index) => {
+                    // Evitamos imprimir de nuevo el camino más corto que ya mostramos arriba
+                    if (camino.ruta !== rutaStr || camino.costo !== distanciaAlDestino) {
+                        const divAlt = document.createElement('div');
+                        divAlt.className = 'resultado-item';
+                        divAlt.style.backgroundColor = '#f8fafc';
+                        divAlt.innerHTML = `
+                            <div style="width: 100%; font-size: 13px;">
+                                <span style="color: #64748b;">Recorrido:</span> ${camino.ruta} <br>
+                                <span style="color: #64748b;">Valor:</span> <strong>${camino.costo}</strong>
+                            </div>
+                        `;
+                        contenidoResultados.appendChild(divAlt);
+                    }
+                });
             }
             
-            contenidoResultados.appendChild(div);
+            panelResultados.style.display = 'block'; 
+            modal.style.display = 'none';            
         }
-        
-        // Hacer visible el panel de resultados
-        panelResultados.style.display = 'flex';
-        // ---------------------------------------------
     } else {
-        alert("Por favor, selecciona un nodo inicial.");
+        alert("Por favor, selecciona origen y destino.");
     }
 });
+
+// --- NUEVO: Evento para cerrar la ventana modal ---
+document.getElementById('btnCerrarModal').addEventListener('click', () => {
+    document.getElementById('modalSinRuta').style.display = 'none';
+});
+// --- NUEVAS FUNCIONES ---
+
+// 1. Reconstruir la ruta exacta de nodos
+function reconstruirRuta(previos, origen, destino) {
+    if (origen === parseInt(destino)) return `A${origen}`;
+    if (previos[destino] === null) return "Inalcanzable/No hay camino";
+    
+    let ruta = [];
+    let actual = parseInt(destino);
+    while (actual !== null) {
+        ruta.unshift(`A${actual}`); // Usa el formato A1, A2, etc.
+        actual = previos[actual];
+    }
+    return ruta.join(' → ');
+}
+
+// 2. Generar y dibujar la Matriz de Adyacencia
+function actualizarMatrizAdyacencia() {
+    const contenedor = document.getElementById('contenidoMatriz');
+    const panel = document.getElementById('panelMatriz');
+    
+    if (nodos.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    let html = '<table class="tabla-matriz"><thead><tr><th>M[i,j]</th>';
+    
+    // Cabeceras de columnas (A1, A2, A3...)
+    nodos.forEach(n => {
+        html += `<th>A${n.id}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    // Filas de la matriz
+    nodos.forEach(origen => {
+        html += `<tr><th>A${origen.id}</th>`;
+        nodos.forEach(destino => {
+            if (origen.id === destino.id) {
+                html += '<td>0</td>'; // Distancia a sí mismo es 0
+            } else {
+                // Buscamos si existe arista dirigida
+                const arista = aristas.find(a => a.origen === origen.id && a.destino === destino.id);
+                if (arista) {
+                    html += `<td>${arista.peso}</td>`;
+                } else {
+                    html += '<td>-1</td>'; // Representa que no hay arista, según la guía
+                }
+            }
+        });
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    contenedor.innerHTML = html;
+    panel.style.display = 'block';
+}
+
 
 // Llamada inicial para asegurar que el lienzo esté limpio
 renderizar();

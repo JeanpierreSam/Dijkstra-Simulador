@@ -11,35 +11,6 @@ let contadorNodos = 1; // Para asignar IDs automáticamente (1, 2, 3...)
 let modoActual = 'agregar_nodo'; // Puede ser: 'agregar_nodo', 'seleccionar'
 let nodoSeleccionado = null;     // Para saber a qué nodo le hicimos clic
 
-// Escuchar clics en el lienzo
-canvas.addEventListener('mousedown', (evento) => {
-    // getBoundingClientRect() nos da la posición exacta del canvas en la pantalla
-    const rect = canvas.getBoundingClientRect();
-    const x = evento.clientX - rect.left;
-    const y = evento.clientY - rect.top;
-
-    if (modoActual === 'agregar_nodo') {
-        // Guardamos las coordenadas y el ID del nuevo nodo
-        nodos.push({ id: contadorNodos, x: x, y: y });
-        contadorNodos++;
-        
-        // Cada vez que modificamos los datos, redibujamos todo
-        renderizar();
-    } 
-    else if (modoActual === 'seleccionar') {
-        // Lógica para detectar si hicimos clic dentro del radio de un nodo existente
-        nodoSeleccionado = null;
-        for (let nodo of nodos) {
-            // Fórmula de distancia entre dos puntos para saber si el clic tocó el círculo
-            const distancia = Math.hypot(nodo.x - x, nodo.y - y);
-            if (distancia <= 20) { // 20 es el radio que le daremos a los nodos
-                nodoSeleccionado = nodo;
-                break;
-            }
-        }
-        renderizar(); // Redibujar para mostrar el nodo resaltado
-    }
-});
 
 // Configurar los botones del panel para cambiar de modo
 document.getElementById('btnAgregarNodo').addEventListener('click', () => {
@@ -163,8 +134,59 @@ function actualizarSelectNodos() {
 
 // Modificar el evento del canvas para actualizar el select cuando agregas un nodo
 canvas.addEventListener('mouseup', () => {
-    actualizarSelectNodos(); // Actualiza la lista desplegable cada vez que dibujas
+    actualizarSelectNodos();
 });
+
+// Escuchar clics en el lienzo
+canvas.addEventListener('mousedown', (evento) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = evento.clientX - rect.left;
+    const y = evento.clientY - rect.top;
+
+    if (modoActual === 'agregar_nodo') {
+        nodos.push({ id: contadorNodos, x: x, y: y });
+        contadorNodos++;
+        renderizar();
+    } 
+    else if (modoActual === 'seleccionar') {
+        // Primero verificar si se hizo clic en una arista
+        const aristaClickeada = encontrarAristaEnClic(x, y);
+        
+        if (aristaClickeada) {
+            // Si se hizo clic en una arista, editar su peso
+            editarPesoArista(aristaClickeada);
+            return; // Salir para no procesar el clic en nodos
+        }
+        
+        // Si no se hizo clic en una arista, verificar nodos
+        nodoSeleccionado = null;
+        for (let nodo of nodos) {
+            const distancia = Math.hypot(nodo.x - x, nodo.y - y);
+            if (distancia <= 20) {
+                nodoSeleccionado = nodo;
+                break;
+            }
+        }
+        renderizar();
+    }
+});
+
+canvas.addEventListener('mousemove', (evento) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = evento.clientX - rect.left;
+    const y = evento.clientY - rect.top;
+    
+    const aristaBajoMouse = encontrarAristaEnClic(x, y);
+    
+    if (aristaBajoMouse && modoActual === 'seleccionar') {
+        canvas.style.cursor = 'pointer'; // Manito
+    } else if (modoActual === 'agregar_nodo') {
+        canvas.style.cursor = 'crosshair'; // Cruz para agregar
+    } else {
+        canvas.style.cursor = 'default'; // Cursor normal
+    }
+});
+
 
 // Evento: Agregar Arco
 // Evento: Agregar Arco (Con validación de duplicados)
@@ -372,6 +394,80 @@ function actualizarMatrizAdyacencia() {
     panel.style.display = 'block';
 }
 
+// Función para calcular la distancia de un punto a un segmento de línea
+function distanciaPuntoALinea(px, py, x1, y1, x2, y2) {
+    const A = px - x1;
+    const B = py - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+    
+    if (lenSq !== 0) // Si los puntos no son iguales
+        param = dot / lenSq;
+
+    let xx, yy;
+
+    if (param < 0) {
+        xx = x1;
+        yy = y1;
+    } else if (param > 1) {
+        xx = x2;
+        yy = y2;
+    } else {
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+    }
+
+    const dx = px - xx;
+    const dy = py - yy;
+    
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// Función para encontrar la arista más cercana al clic
+function encontrarAristaEnClic(x, y) {
+    const umbral = 10; // Distancia máxima en píxeles para considerar que se hizo clic en la arista
+    
+    for (let arista of aristas) {
+        const origen = nodos.find(n => n.id === arista.origen);
+        const destino = nodos.find(n => n.id === arista.destino);
+        
+        if (origen && destino) {
+            const distancia = distanciaPuntoALinea(x, y, origen.x, origen.y, destino.x, destino.y);
+            
+            if (distancia <= umbral) {
+                return arista;
+            }
+        }
+    }
+    
+    return null;
+}
+
+// Función para editar el peso de una arista
+function editarPesoArista(arista) {
+    const nuevoPeso = prompt(
+        `Editar peso de la arista A${arista.origen} → A${arista.destino}\n\n` +
+        `Peso actual: ${arista.peso}\n` +
+        `Nuevo peso:`,
+        arista.peso
+    );
+    
+    if (nuevoPeso !== null && nuevoPeso.trim() !== '') {
+        const pesoNum = parseInt(nuevoPeso);
+        
+        if (!isNaN(pesoNum) && pesoNum >= 0) {
+            arista.peso = pesoNum;
+            renderizar();
+            alert(`Peso actualizado: A${arista.origen} → A${arista.destino} = ${pesoNum}`);
+        } else {
+            alert('Por favor, ingresa un número válido mayor o igual a 0.');
+        }
+    }
+}
 
 // Llamada inicial para asegurar que el lienzo esté limpio
 renderizar();

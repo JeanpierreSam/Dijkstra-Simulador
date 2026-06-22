@@ -252,13 +252,13 @@ function actualizarSelectNodos() {
         // Opción para origen
         const opt1 = document.createElement('option');
         opt1.value = nodo.id;
-        opt1.textContent = `Nodo A${nodo.id}`;
+        opt1.textContent = `Nodo ${nodo.id}`;
         selectInicial.appendChild(opt1);
 
         // Opción para destino
         const opt2 = document.createElement('option');
         opt2.value = nodo.id;
-        opt2.textContent = `Nodo A${nodo.id}`;
+        opt2.textContent = `Nodo ${nodo.id}`;
         selectFinal.appendChild(opt2);
     });
 
@@ -269,13 +269,13 @@ function actualizarSelectNodos() {
 
 // 1. Reconstruir la ruta exacta de nodos
 function reconstruirRuta(previos, origen, destino) {
-    if (origen === parseInt(destino)) return `A${origen}`;
+    if (origen === parseInt(destino)) return `${origen}`;
     if (previos[destino] === null) return "Inalcanzable/No hay camino";
     
     let ruta = [];
     let actual = parseInt(destino);
     while (actual !== null) {
-        ruta.unshift(`A${actual}`); // Usa el formato A1, A2, etc.
+        ruta.unshift(`${actual}`); // Usa el formato A1, A2, etc.
         actual = previos[actual];
     }
     return ruta.join(' → ');
@@ -295,13 +295,13 @@ function actualizarMatrizAdyacencia() {
     
     // Cabeceras de columnas (A1, A2, A3...)
     nodos.forEach(n => {
-        html += `<th>A${n.id}</th>`;
+        html += `<th>${n.id}</th>`;
     });
     html += '</tr></thead><tbody>';
 
     // Filas de la matriz
     nodos.forEach(origen => {
-        html += `<tr><th>A${origen.id}</th>`;
+        html += `<tr><th>${origen.id}</th>`;
         nodos.forEach(destino => {
             if (origen.id === destino.id) {
                 html += '<td>0</td>'; // Distancia a sí mismo es 0
@@ -379,7 +379,7 @@ function encontrarAristaEnClic(x, y) {
 // Función para editar el peso de una arista
 function editarPesoArista(arista) {
     const nuevoPeso = prompt(
-        `Editar peso de la arista A${arista.origen} → A${arista.destino}\n\n` +
+        `Editar peso de la arista ${arista.origen} → ${arista.destino}\n\n` +
         `Peso actual: ${arista.peso}\n` +
         `Nuevo peso:`,
         arista.peso
@@ -392,7 +392,7 @@ function editarPesoArista(arista) {
             if (!validarPesoNegativo(pesoNum)) return;
             arista.peso = pesoNum;
             renderizar();
-            alert(`Peso actualizado: A${arista.origen} → A${arista.destino} = ${pesoNum}`);
+            alert(`Peso actualizado: ${arista.origen} → ${arista.destino} = ${pesoNum}`);
         } else {
             alert('Por favor, ingresa un número válido mayor o igual a 0.');
         }
@@ -413,7 +413,7 @@ function validarPesoNegativo(peso) {
 
 function abrirMenuContextual(idNodo, x, y) {
     contextNodeId = idNodo;
-    document.getElementById('contextMenuTitle').textContent = `Nodo A${idNodo}`;
+    document.getElementById('contextMenuTitle').textContent = `Nodo ${idNodo}`;
     
     const menu = document.getElementById('contextMenu');
     menu.style.left = x + 'px';
@@ -432,7 +432,7 @@ function confirmarEliminarNodoContextual() {
     const id = contextNodeId;
     cerrarMenuContextual();
     
-    if (!confirm(`¿Eliminar el Nodo A${id} y sus aristas conectadas?`)) return;
+    if (!confirm(`¿Eliminar el Nodo ${id} y sus aristas conectadas?`)) return;
     
     // Eliminar nodo
     nodos = nodos.filter(n => n.id !== id);
@@ -448,7 +448,7 @@ function confirmarEliminarNodoContextual() {
     
     actualizarSelectNodos();
     renderizar();
-    setStatus(`Nodo A${id} eliminado.`);
+    setStatus(`Nodo ${id} eliminado.`);
 }
 
 // Cerrar menú al hacer click fuera
@@ -615,7 +615,7 @@ document.getElementById('btnAgregarArco').addEventListener('click', () => {
             if (indiceArcoExistente !== -1) {
                 // Si existe, solo actualizamos el peso (evita arcos duplicados)
                 aristas[indiceArcoExistente].peso = peso;
-                alert(`El arco de A${origen} a A${destino} ha sido actualizado con el nuevo peso de ${peso}.`);
+                alert(`El arco de ${origen} a ${destino} ha sido actualizado con el nuevo peso de ${peso}.`);
             } else {
                 // Si no existe, creamos uno nuevo
                 aristas.push({ origen: origen, destino: destino, peso: peso });

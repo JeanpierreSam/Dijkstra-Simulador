@@ -1,7 +1,8 @@
 // Referencias al DOM
 const canvas = document.getElementById('lienzoGrafos');
 const ctx = canvas.getContext('2d'); // El contexto 2D es nuestra "herramienta de dibujo"
-
+// Instanciamos la clase Grafo de tu logica.js
+const grafo = new Grafo(); 
 // Estado global del grafo
 let nodos = [];
 let aristas = [];
@@ -16,10 +17,51 @@ let offsetMouseX = 0;
 let offsetMouseY = 0;
 let rutaResaltada = null;
 
+let contextNodeId = null; // ID del nodo seleccionado en el menú contextual
+let freeIds = [];
+
+// Variables de zoom y pan
+let scale = 1.0;
+let panX = 0;
+let panY = 0;
+let isPanning = false;
+let startPanX = 0;
+let startPanY = 0;
+
+// Obtener el siguiente ID disponible
+function getNextId() {
+    if (freeIds.length > 0) {
+        return freeIds.shift(); // Toma el menor ID disponible
+    }
+    return contadorNodos++;
+}
+
+// Liberar un ID cuando se elimina un nodo
+function releaseId(id) {
+    freeIds.push(id);
+    freeIds.sort((a, b) => a - b); // Mantener orden ascendente
+}
+
+// Convierte coordenadas de pantalla a coordenadas del grafo (considerando zoom y pan)
+function toGraphCoords(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const screenX = clientX - rect.left;
+    const screenY = clientY - rect.top;
+    return {
+        x: (screenX - panX) / scale,
+        y: (screenY - panY) / scale
+    };
+}
+
 
 // Función principal de dibujo
 function renderizar() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Aplicar transformaciones de zoom y pan
+    ctx.save();
+    ctx.translate(panX, panY);
+    ctx.scale(scale, scale);
 
     // 1. Dibujar aristas
     aristas.forEach(arista => {
@@ -98,7 +140,6 @@ function renderizar() {
                 
                 const angulo = Math.atan2(destino.y - origen.y, destino.x - origen.x);
                 const flechaX = destino.x - 20 * Math.cos(angulo);
-                const flechaX2 = destino.x - 20 * Math.cos(angulo);
                 const flechaY = destino.y - 20 * Math.sin(angulo);
                 
                 ctx.beginPath();
@@ -111,11 +152,30 @@ function renderizar() {
         }
     }
 
+    // Restaurar transformaciones antes de dibujar la matriz
+    ctx.restore();
+    
     actualizarMatrizAdyacencia();
 }
 
-// Instanciamos la clase Grafo de tu logica.js
-const grafo = new Grafo(); 
+// Funciones de zoom
+function zoomIn() {
+    scale *= 1.2;
+    renderizar();
+}
+
+function zoomOut() {
+    scale /= 1.2;
+    renderizar();
+}
+
+function resetZoom() {
+    scale = 1.0;
+    panX = 0;
+    panY = 0;
+    renderizar();
+}
+
 
 function resaltarRutaEnCanvas(ruta) {
     rutaResaltada = ruta; // Solo guarda la ruta
@@ -149,6 +209,31 @@ function mostrarResultadosEnCanvas(rutaStr, costo, algoritmo) {
     ctx.font = '13px Arial';
     ctx.fillText(`Ruta: ${rutaStr}`, x + padding, y + 45);
     ctx.fillText(`Costo total: ${costo}`, x + padding, y + 65);
+}
+
+function mostrarMensajeErrorEnCanvas(algoritmo) {
+    const padding = 15;
+    const x = 10;
+    const y = 10;
+    const ancho = 350;
+    const alto = 80;
+    
+    // Fondo semitransparente rojo claro
+    ctx.fillStyle = 'rgba(254, 242, 242, 0.95)'; // bg-red-50 con opacidad
+    ctx.fillRect(x, y, ancho, alto);
+    ctx.strokeStyle = '#dc2626'; // rojo
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, ancho, alto);
+    
+    // Texto de error
+    ctx.fillStyle = '#991b1b'; // rojo oscuro
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`❌ Algoritmo: ${algoritmo}`, x + padding, y + 25);
+    
+    ctx.font = '13px Arial';
+    ctx.fillText(`No existe camino posible`, x + padding, y + 50);
+    ctx.fillText(`entre los nodos seleccionados`, x + padding, y + 68);
 }
 
 // Función para actualizar el selector de nodos para Dijkstra
@@ -304,6 +389,7 @@ function editarPesoArista(arista) {
         const pesoNum = parseInt(nuevoPeso);
         
         if (!isNaN(pesoNum) && pesoNum >= 0) {
+            if (!validarPesoNegativo(pesoNum)) return;
             arista.peso = pesoNum;
             renderizar();
             alert(`Peso actualizado: A${arista.origen} → A${arista.destino} = ${pesoNum}`);
@@ -313,15 +399,97 @@ function editarPesoArista(arista) {
     }
 }
 
-// Escuchar clics en el lienzo
-canvas.addEventListener('mousedown', (evento) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = evento.clientX - rect.left;
-    const y = evento.clientY - rect.top;
+function validarPesoNegativo(peso) {
+    const algoritmo = document.getElementById('selectAlgoritmo').value;
+    
+    if (peso < 0 && algoritmo === 'dijkstra') {
+        alert('⚠️ ATENCIÓN: Dijkstra NO admite pesos negativos.\n\n' +
+              'El algoritmo asume que los pesos son no negativos. ' +
+              'Si necesitas usar pesos negativos, por favor cambia al algoritmo Floyd-Warshall.');
+        return false;
+    }
+    return true;
+}
 
+function abrirMenuContextual(idNodo, x, y) {
+    contextNodeId = idNodo;
+    document.getElementById('contextMenuTitle').textContent = `Nodo A${idNodo}`;
+    
+    const menu = document.getElementById('contextMenu');
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    menu.classList.add('open');
+}
+
+function cerrarMenuContextual() {
+    document.getElementById('contextMenu').classList.remove('open');
+    contextNodeId = null;
+}
+
+function confirmarEliminarNodoContextual() {
+    if (contextNodeId === null) return;
+    
+    const id = contextNodeId;
+    cerrarMenuContextual();
+    
+    if (!confirm(`¿Eliminar el Nodo A${id} y sus aristas conectadas?`)) return;
+    
+    // Eliminar nodo
+    nodos = nodos.filter(n => n.id !== id);
+    // Eliminar aristas conectadas
+    aristas = aristas.filter(a => a.origen !== id && a.destino !== id);
+    
+    // Liberar ID para reutilización
+    releaseId(id);
+    
+    // Limpiar selección y ruta si el nodo eliminado era parte de ella
+    if (nodoSeleccionado && nodoSeleccionado.id === id) nodoSeleccionado = null;
+    if (rutaResaltada && rutaResaltada.includes(id)) rutaResaltada = null;
+    
+    actualizarSelectNodos();
+    renderizar();
+    setStatus(`Nodo A${id} eliminado.`);
+}
+
+// Cerrar menú al hacer click fuera
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('contextMenu');
+    if (menu.classList.contains('open') && !menu.contains(e.target)) {
+        cerrarMenuContextual();
+    }
+});
+
+
+
+canvas.addEventListener('mousedown', (evento) => {
+    const gCoord = toGraphCoords(evento.clientX, evento.clientY);
+    const x = gCoord.x;
+    const y = gCoord.y;
+
+    // Click derecho: iniciar pan
+    if (evento.button === 2) {
+        const gCoord = toGraphCoords(evento.clientX, evento.clientY);
+        
+        // Verificar si el click fue sobre un nodo
+        const nodoClickeado = nodos.find(n => Math.hypot(n.x - gCoord.x, n.y - gCoord.y) <= 20);
+        
+        if (nodoClickeado) {
+            abrirMenuContextual(nodoClickeado.id, evento.clientX, evento.clientY);
+            return; // No iniciar pan si fue sobre un nodo
+        }
+        
+        // Si no fue sobre un nodo, iniciar pan normalmente
+        isPanning = true;
+        startPanX = evento.clientX - panX;
+        startPanY = evento.clientY - panY;
+        canvas.style.cursor = 'grabbing';
+        return;
+    }
+
+    // Click izquierdo
     if (modoActual === 'agregar_nodo') {
-        nodos.push({ id: contadorNodos, x: x, y: y });
-        contadorNodos++;
+        const id = getNextId(); // Usaremos esta función más adelante (IDs reutilizables)
+        nodos.push({ id: id, x: x, y: y });
         renderizar();
     } 
     else if (modoActual === 'seleccionar') {
@@ -329,13 +497,13 @@ canvas.addEventListener('mousedown', (evento) => {
         const aristaClickeada = encontrarAristaEnClic(x, y);
         
         if (aristaClickeada) {
-            editarPesoArista(aristaClickeada);
+            abrirModalArista(aristaClickeada); // Usaremos esta función más adelante (Modal)
             return; 
         }
         
         // Verificar si se hizo clic en un nodo
         nodoSeleccionado = null;
-        arrastrandoNodo = null; // 👈 Limpiar antes
+        arrastrandoNodo = null;
         
         for (let nodo of nodos) {
             const distancia = Math.hypot(nodo.x - x, nodo.y - y);
@@ -352,9 +520,17 @@ canvas.addEventListener('mousedown', (evento) => {
 });
 
 canvas.addEventListener('mousemove', (evento) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = evento.clientX - rect.left;
-    const y = evento.clientY - rect.top;
+    // Si está haciendo pan (click derecho arrastrando)
+    if (isPanning) {
+        panX = evento.clientX - startPanX;
+        panY = evento.clientY - startPanY;
+        renderizar();
+        return;
+    }
+    
+    const gCoord = toGraphCoords(evento.clientX, evento.clientY);
+    const x = gCoord.x;
+    const y = gCoord.y;
     
     // Si está arrastrando un nodo, moverlo
     if (arrastrandoNodo && modoActual === 'seleccionar') {
@@ -376,10 +552,39 @@ canvas.addEventListener('mousemove', (evento) => {
     }
 });
 
-canvas.addEventListener('mouseup', () => {
-    arrastrandoNodo = null; //
+canvas.addEventListener('mouseup', (evento) => {
+    // Si suelta el click derecho, detener pan
+    if (evento && evento.button === 2) {
+        isPanning = false;
+        canvas.style.cursor = 'crosshair';
+    }
+    
+    arrastrandoNodo = null;
     actualizarSelectNodos();
 });
+
+// Zoom con rueda del mouse
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    
+    const mousePos = toGraphCoords(e.clientX, e.clientY);
+    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+    
+    // Limitar zoom entre 0.2x y 5x
+    if (scale * zoomFactor < 0.2 || scale * zoomFactor > 5) return;
+    
+    scale *= zoomFactor;
+    
+    // Ajustar pan para que el zoom sea centrado en el mouse
+    const rect = canvas.getBoundingClientRect();
+    panX = (e.clientX - rect.left) - mousePos.x * scale;
+    panY = (e.clientY - rect.top) - mousePos.y * scale;
+    
+    renderizar();
+}, { passive: false });
+
+// Prevenir el menú contextual del navegador al hacer click derecho en el canvas
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // Configurar los botones del panel para cambiar de modo
 document.getElementById('btnAgregarNodo').addEventListener('click', () => {
@@ -396,7 +601,10 @@ document.getElementById('btnAgregarArco').addEventListener('click', () => {
     const destino = parseInt(document.getElementById('arcoDestino').value);
     const peso = parseInt(document.getElementById('arcoPeso').value);
 
-    if (origen && destino && peso) {
+    if (origen && destino && peso !== undefined) { // 👈 Cambié 'peso' por 'peso !== undefined' para permitir peso 0
+        
+        if (!validarPesoNegativo(peso)) return; // Si es negativo con Dijkstra, se detiene aquí
+        
         const existeOrigen = nodos.some(n => n.id === origen);
         const existeDestino = nodos.some(n => n.id === destino);
         
@@ -431,12 +639,11 @@ document.getElementById('btnAgregarArco').addEventListener('click', () => {
 document.getElementById('btnEliminarNodo').addEventListener('click', () => {
     const idEliminar = parseInt(document.getElementById('inputEliminarNodo').value);
     
-    if(idEliminar) {
-        // Filtrar (eliminar) el nodo del arreglo
+    if (idEliminar) {
         nodos = nodos.filter(nodo => nodo.id !== idEliminar);
-        
-        // Eliminar también cualquier arco que estuviera conectado a este nodo
         aristas = aristas.filter(arista => arista.origen !== idEliminar && arista.destino !== idEliminar);
+        
+        releaseId(idEliminar);
         
         actualizarSelectNodos();
         renderizar();
@@ -482,7 +689,14 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
         const panelResultados = document.getElementById('panelResultados');
         const contenidoResultados = document.getElementById('contenidoResultados');
         
+        
         if (distanciaAlDestino === Infinity) {
+            // Limpiar ruta resaltada anterior si existe
+            limpiarRutaResaltada();
+            
+            // Mostrar mensaje de error en el canvas
+            mostrarMensajeErrorEnCanvas(nombreAlgoritmo);
+            
             panelResultados.style.display = 'none'; 
             modal.style.display = 'flex';           
         } else {
@@ -545,7 +759,20 @@ document.getElementById('btnCerrarModal').addEventListener('click', () => {
     document.getElementById('modalSinRuta').style.display = 'none';
 });
 
-
+document.getElementById('btnLimpiarTodo').addEventListener('click', () => {
+    if (!confirm('¿Estás seguro de que deseas eliminar todo el grafo? Esta acción no se puede deshacer.')) return;
+    
+    nodos = [];
+    aristas = [];
+    freeIds = [];
+    contadorNodos = 1; // Reiniciar contador
+    rutaResaltada = null;
+    nodoSeleccionado = null;
+    
+    actualizarSelectNodos();
+    renderizar();
+    setStatus('Grafo limpiado completamente.');
+});
 
 // Llamada inicial para asegurar que el lienzo esté limpio
 renderizar();

@@ -192,12 +192,12 @@ function limpiarRutaResaltada() {
     renderizar();
 }
 
-function mostrarResultadosEnCanvas(rutaStr, costo, algoritmo) {
+function mostrarResultadosEnCanvas(rutaStr, costo, algoritmo, tiempo) {
     const padding = 15;
     const x = 10;
     const y = 10;
     const ancho = 350;
-    const alto = 80;
+    const alto = 100; // 👈 Aumentado para mostrar el tiempo
     
     // Fondo semitransparente
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
@@ -215,14 +215,15 @@ function mostrarResultadosEnCanvas(rutaStr, costo, algoritmo) {
     ctx.font = '13px Arial';
     ctx.fillText(`Ruta: ${rutaStr}`, x + padding, y + 45);
     ctx.fillText(`Costo total: ${costo}`, x + padding, y + 65);
+    ctx.fillText(`⏱️ Tiempo: ${tiempo} ms`, x + padding, y + 85); // 👈 Nueva línea
 }
 
-function mostrarMensajeErrorEnCanvas(algoritmo) {
+function mostrarMensajeErrorEnCanvas(algoritmo, tiempo) {
     const padding = 15;
     const x = 10;
     const y = 10;
     const ancho = 350;
-    const alto = 80;
+    const alto = 100; // 👈 Aumentado de 80 a 100 para mostrar el tiempo
     
     // Fondo semitransparente rojo claro
     ctx.fillStyle = 'rgba(254, 242, 242, 0.95)'; // bg-red-50 con opacidad
@@ -240,6 +241,7 @@ function mostrarMensajeErrorEnCanvas(algoritmo) {
     ctx.font = '13px Arial';
     ctx.fillText(`No existe camino posible`, x + padding, y + 50);
     ctx.fillText(`entre los nodos seleccionados`, x + padding, y + 68);
+    ctx.fillText(`⏱️ Tiempo: ${tiempo} ms`, x + padding, y + 88); // 👈 Nueva línea
 }
 
 // Función para actualizar el selector de nodos para Dijkstra
@@ -740,20 +742,33 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
         // 1. Ejecutar el algoritmo elegido
         let operacionesRealizadas = 0; // 👈 Variable para guardar el contador
 
+        // 1. Ejecutar el algoritmo elegido (con medición de tiempo)
+        let tiempoEjecucion = 0; // 👈 Variable para guardar el tiempo
+
         if (algoritmoSeleccionado === 'dijkstra') {
             nombreAlgoritmo = "Dijkstra";
+            
+            const inicio = performance.now(); // 👈 Iniciar cronómetro
             const resultado = grafo.calcularDijkstra(nodoInicial);
+            const fin = performance.now();    // 👈 Detener cronómetro
+            
+            tiempoEjecucion = (fin - inicio).toFixed(4); // 👈 Calcular tiempo en ms
+            
             distanciaAlDestino = resultado.distancias[nodoFinal];
-            operacionesRealizadas = resultado.operaciones; // 👈 Guardar el contador
             if (distanciaAlDestino !== Infinity) {
                 rutaStr = reconstruirRuta(resultado.previos, nodoInicial, nodoFinal);
             }
         } else {
             nombreAlgoritmo = "Floyd-Warshall";
+            
+            const inicio = performance.now(); // 👈 Iniciar cronómetro
             const resultado = grafo.calcularFloydWarshall(nodoInicial, nodoFinal);
+            const fin = performance.now();    // 👈 Detener cronómetro
+            
+            tiempoEjecucion = (fin - inicio).toFixed(4); // 👈 Calcular tiempo en ms
+            
             distanciaAlDestino = resultado.costo;
             rutaStr = resultado.rutaStr;
-            operacionesRealizadas = resultado.operaciones; // 👈 Guardar el contador
         }
 
         // 2. Obtener TODAS las rutas posibles
@@ -778,6 +793,7 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
             
             
             // A. Mostrar el camino óptimo (calculado por el algoritmo elegido)
+            // A. Mostrar el camino óptimo (calculado por el algoritmo elegido)
             const divOptimo = document.createElement('div');
             divOptimo.className = 'resultado-item';
             divOptimo.style.borderLeft = '4px solid #10b981';
@@ -786,7 +802,7 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
                     <strong style="color: #10b981;">Camino más corto (${nombreAlgoritmo})</strong><br>
                     <span style="font-size: 13px; color: #64748b;">Secuencia:</span> <strong>${rutaStr}</strong><br>
                     <span style="font-size: 13px; color: #64748b;">Valor total:</span> <strong style="font-size: 16px;">${distanciaAlDestino}</strong><br>
-                    <span style="font-size: 12px; color: #6b7280;">⚙️ Operaciones realizadas:</span> <strong style="color: #4f46e5;">${operacionesRealizadas}</strong>
+                    <span style="font-size: 12px; color: #6b7280;">⏱️ Tiempo de ejecución:</span> <strong style="color: #4f46e5;">${tiempoEjecucion} ms</strong>
                 </div>
             `;
             contenidoResultados.appendChild(divOptimo);
@@ -819,7 +835,7 @@ document.getElementById('btnCalcularDijkstra').addEventListener('click', () => {
             
             const rutaArray = rutaStr.split(' → ').map(n => parseInt(n));
             resaltarRutaEnCanvas(rutaArray);
-            mostrarResultadosEnCanvas(rutaStr, distanciaAlDestino, nombreAlgoritmo);
+            mostrarResultadosEnCanvas(rutaStr, distanciaAlDestino, nombreAlgoritmo, tiempoEjecucion);
 
             panelResultados.style.display = 'block'; 
             modal.style.display = 'none';            

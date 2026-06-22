@@ -358,7 +358,7 @@ function distanciaPuntoALinea(px, py, x1, y1, x2, y2) {
 
 // Función para encontrar la arista más cercana al clic
 function encontrarAristaEnClic(x, y) {
-    const umbral = 10; // Distancia máxima en píxeles para considerar que se hizo clic en la arista
+    const umbral = 10 / scale; // Distancia máxima en píxeles para considerar que se hizo clic en la arista
     
     for (let arista of aristas) {
         const origen = nodos.find(n => n.id === arista.origen);
@@ -507,7 +507,7 @@ canvas.addEventListener('mousedown', (evento) => {
         
         for (let nodo of nodos) {
             const distancia = Math.hypot(nodo.x - x, nodo.y - y);
-            if (distancia <= 20) {
+            if (distancia <= 20 / scale) {
                 nodoSeleccionado = nodo;
                 arrastrandoNodo = nodo;
                 offsetMouseX = x - nodo.x; 
